@@ -1,5 +1,9 @@
 <?php
 session_start();
+
+if(isset($_COOKIE["succesvol"])){
+    echo $_COOKIE["succesvol"];
+}
 if (!isset($_SESSION["ingelogd"]) || $_SESSION["ingelogd"] !== true) {
     header("Location: login.php");
     exit();

@@ -10,20 +10,31 @@ if ($method === "POST") {
     $dotenv->safeLoad();
 
     try {
+        // Load environment variables
         $host = $_ENV["host"];
         $usernameDb = $_ENV["username"];
         $passwordDb = $_ENV["password"];
         $database = $_ENV["database"];
 
+        // Establish database connection
         $connection = new mysqli($host, $usernameDb, $passwordDb, $database);
         if ($connection->connect_error) {
-            throw new Exception("Databaseverbinding mislukt: " . $connection->connect_error);
+            throw new Exception("Database connection failed: " . $connection->connect_error);
         }
 
-        $gebruikersnaam = htmlspecialchars($_POST["gebruikersnaam"]);
-        $wachtwoord = htmlspecialchars($_POST["wachtwoord"]);
+        // Get sanitized inputs
+        $gebruikersnaam = htmlspecialchars($_POST["gebruikersnaam"] ?? '');
+        $wachtwoord = htmlspecialchars($_POST["wachtwoord"] ?? '');
 
-        $query = "SELECT Naam, Salting, Email, Hash_wachtwoord, blocked, blockedTijd, rechten_niveau FROM gebruiker_uitgebreid WHERE Naam = ?";
+        // Ensure both fields are provided
+        if (empty($gebruikersnaam) || empty($wachtwoord)) {
+            $_SESSION["message"] = "<div class='error-message'>Gebruikersnaam en wachtwoord zijn verplicht.</div>";
+            header("Location: login.php");
+            exit();
+        }
+
+        // Query to fetch user data
+        $query = "SELECT Naam, Salting, Email, Hash_wachtwoord, blocked, blockedTijd, rol_id FROM gebruiker_uitgebreid WHERE Naam = ?";
         $statement = $connection->prepare($query);
         $statement->bind_param("s", $gebruikersnaam);
 
@@ -31,17 +42,18 @@ if ($method === "POST") {
             $statement->bind_result($dbGebruikersnaam, $salt, $email, $dbWachtwoord, $blocked, $blockedTijd, $niveau);
 
             if ($statement->fetch()) {
+                // Blocked user handling
                 if ($blocked == 1) {
                     $currentTime = new DateTime();
                     $blockedUntil = new DateTime($blockedTijd);
-
                     if ($currentTime < $blockedUntil) {
                         $remainingTime = $currentTime->diff($blockedUntil);
                         $timeLeft = $remainingTime->format('%h uur, %i minuten en %s seconden');
-                        $_SESSION["message"] = "<div class='error-message'>Je bent geblokkeerd voor $timeLeft</div>";
+                        $_SESSION["message"] = "<div class='error-message'>Je bent geblokkeerd voor $timeLeft.</div>";
                         header("Location: login.php");
                         exit();
                     } else {
+                        // Unblocked, proceed to login
                         $_SESSION["ingelogd"] = true;
                         $_SESSION["username"] = $gebruikersnaam;
                         $_SESSION["email"] = $email;
@@ -52,6 +64,7 @@ if ($method === "POST") {
                     }
                 }
 
+                // Combine password with salt for verification
                 $wachtwoordSalt = $wachtwoord . $salt;
 
                 if (!password_verify($wachtwoordSalt, $dbWachtwoord)) {
@@ -60,6 +73,7 @@ if ($method === "POST") {
 
                     $_SESSION["message"] = "<div class='error-message'>Wachtwoord is incorrect. Je hebt nog $kansen pogingen.</div>";
 
+                    // Block user after 3 failed attempts
                     if ($_SESSION["blocked"] >= 3) {
                         $_SESSION["isBlocked"] = true;
                         $_SESSION["username"] = $gebruikersnaam;
@@ -68,14 +82,17 @@ if ($method === "POST") {
                         exit();
                     }
                 } else {
+                    // Successful login
                     $_SESSION["ingelogd"] = true;
                     $_SESSION["username"] = $gebruikersnaam;
                     $_SESSION["email"] = $email;
                     $_SESSION["password"] = $wachtwoord;
+                    $_SESSION["blocked"] = 0; // Reset blocked attempts after successful login
                     header("Location: ingelogd.php");
                     exit();
                 }
             } else {
+                // User not found
                 $_SESSION["message"] = "<div class='error-message'>Gebruikersnaam niet gevonden.</div>";
             }
         } else {
@@ -84,13 +101,18 @@ if ($method === "POST") {
     } catch (Exception $e) {
         $_SESSION["message"] = "<div class='error-message'>Fout: " . $e->getMessage() . "</div>";
     } finally {
-        $statement->close();
-        $connection->close();
+        if (isset($statement)) {
+            $statement->close();
+        }
+        if (isset($connection)) {
+            $connection->close();
+        }
     }
 } elseif ($method === "GET") {
     $_SESSION["blocked"] = 0;
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="nl">

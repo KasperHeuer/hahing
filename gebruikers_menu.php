@@ -2,7 +2,6 @@
 <html lang="nl">
 
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gebruikersinformatie</title>
@@ -12,7 +11,6 @@
 <body>
     <div class="container">
         <?php
-
         try {
             session_start();
             require "vendor/autoload.php";
@@ -52,10 +50,42 @@
                 throw new Exception("Execution failed: " . $statement->error);
             }
 
-            $statement->bind_result($id, $gebruikersnaam, $email, $voornaam, $achternaam, $salting, $hash_wachtwoord, $aantal_logins, $laatste_login, $blocked, $blockedTijd, $FACode, $rechten);
+            $statement->bind_result($id, $gebruikersnaam, $email, $voornaam, $achternaam, $salting, $hash_wachtwoord, $aantal_logins, $laatste_login, $blocked, $blockedTijd, $FACode, $rol_id);
             $wachtwoord = $_SESSION["password"];
 
             if ($statement->fetch()) {
+                // After fetching, close the first statement
+                $statement->close();
+
+
+
+                $queryTwee = "SELECT * FROM rollen WHERE rolid = ?";
+                $rolStatement = $connection->prepare($queryTwee);
+
+                if (!$rolStatement) {
+                    throw new Exception("Prepare failed for role query: " . $connection->error);
+                }
+
+                $rolStatement->bind_param("i", $rol_id);
+
+                if (!$rolStatement->execute()) {
+                    throw new Exception("Role query execution failed: " . $rolStatement->error);
+                }
+
+                // Bind the result to fetch role data
+                $rolStatement->bind_result($rolId, $rolNaam, $rolOmschrijving, $rechten);
+
+                // Try fetching the role data
+                if ($rolStatement->fetch()) {
+                    $rolStatement->close(); // Close the role statement after fetching the data
+                } else {
+                    // If no data is found, set default values
+                    $rolNaam = 'Onbekend';
+                    $rolOmschrijving = 'Geen omschrijving beschikbaar';
+                    $rechten = 0;
+                }
+
+                // Display the user information
                 $message = "
                     <div class='user-info'>
                         <h1>Gebruikersinformatie</h1>
@@ -66,30 +96,36 @@
                         <p><strong>Wachtwoord:</strong> $wachtwoord</p>
                         <p><strong>Aantal logins:</strong> $aantal_logins</p>
                         <p><strong>Laatste login:</strong> $laatste_login</p>
+                        <p><strong>Rol:</strong> $rolNaam</p>
                     </div>
                 ";
             } else {
-                $message = "<p class='error-message'>No user found with that username.</p>";
+                $message = "<p class='error-message'>Geen gebruiker gevonden met deze gebruikersnaam.</p>";
             }
 
-            $statement->close();
+            // Close the main connection
             $connection->close();
         } catch (Exception $e) {
-            $message = "<p class='error-message'>Error: " . $e->getMessage() . "</p>";
+            $message = "<p class='error-message'>Fout: " . $e->getMessage() . "</p>";
         }
 
         echo isset($message) ? $message : '';
         ?>
     </div>
+
     <a href="logout.php" class='logout'>Logout</a>
+
+    <?php
+    // Ensure that $rechten is set correctly
+    if (isset($rechten) && $rechten >= 2) {
+        $_SESSION["rechten"] = $rechten;
+        echo "<a href='edit.php' class='edit-link'>Bewerk</a>";
+    }
+    ?>
 </body>
-<?php
-if ($rechten >= 2) {
-    $_SESSION["rechten"] = $rechten;
-    echo "<a href='edit.php' class ='edit-link'>Edit</a>";
-}
-?>
+
 </html>
+
 <style>
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

@@ -57,7 +57,7 @@
                 echo "
                     <div class='user-info'>
                         <p><strong>Id:</strong> $id, $naam</p>
-                        <a href='bewerk.php?id=$id' class='logout'>Bewerken</a>
+                        <a href='verwijder.php?id=$id' class='logout'>Verwijderen</a>
                     </div>
                 ";
             }
@@ -155,8 +155,8 @@
         font-weight: bold;
         border-radius: 5px;
         transition: background-color 0.3s ease, transform 0.2s ease;
-        
-        
+
+
     }
 
     .logout:hover {

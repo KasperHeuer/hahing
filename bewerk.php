@@ -6,7 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Updaten</title>
     <?php
+    session_start();
 
+    if (!isset($_SESSION["ingelogd"]) || $_SESSION["ingelogd"] !== true) {
+        header("Location: login.php");
+        exit();
+    }
+
+    require "vendor/autoload.php";
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+    $dotenv->safeLoad();
     $method = $_SERVER["REQUEST_METHOD"];
 
     $host = $_ENV["host"];
@@ -14,112 +23,237 @@
     $passwordDb = $_ENV["password"];
     $database = $_ENV["database"];
 
-
     try {
+        if ($method == "GET") {
+            if (isset($_GET["id"])) {
+                $Id = $_GET["id"];
+                $Naam = "<error>";
+                $Email = "<error>";
+                $voornaam = "<error>";
+                $achternaam = "<error>";
+                $blocked = "<error>";
+                $rechten = "<error>";
 
-        if ($methode == "GET") {
-            if (isset($_GET["idProduct"])) {
+                $connection = new mysqli($host, $usernameDb, $passwordDb, $database);
 
-                $setId = $_GET["idProduct"];
-                $setNaam = "<error>";
-                $setKosten = "<error>";
-                $setNummer = "<error>";
-                // hier wordt alle informatie doorgegeven waarmee de code in de database kan
-                $connectie = new mysqli($gastheer, $gebruikerVoorDatabase, $wachtwoordVoorDatabase, $gegevensbestand);
-                // als er een connectie error is "gooit" de code de error naar de catch functie, die later in de code staat
-                if ($connectie->connect_error) {
-                    throw new Exception($connectie->connect_error);
+                if ($connection->connect_error) {
+                    throw new Exception($connection->connect_error);
                 }
-                // hier wordt alles geselecteerd van de tabel producten
-                $vraag = "SELECT * FROM producten WHERE idProduct = ?";
-                // hier wordt de code voorbereid
-                $stelling = $connectie->prepare($vraag);
-                // hier wordt de parmaters $setId omgezet naar integer/nummer waardoor het leesbaar is door de database
-                $stelling->bind_param("i", $setId);
-                // hier worden de resultaten van de $vraag omgezet in de variabelen $id, $naam, $kosten, $nummer, $mimeType en $afbeelding
-                $stelling->bind_result($id, $naam, $kosten, $nummer, $mimeType, $abeelding);
-                // hier als de variabele $stelleing niet wordt uitgevoerd, dan wordt de error "gegooit" naar de catch functie, die later in de code staat
-                if (!$stelling->execute()) {
-                    throw new Exception($connectie->error);
+
+                $query = "SELECT Naam, Email, voornaam, Blocked, rechten_niveau FROM gebruiker_uitgebreid WHERE ID = ?";
+                $statement = $connection->prepare($query);
+                $statement->bind_param("i", $_GET["id"]);
+                $statement->bind_result($naam, $email, $voornaam, $blocked, $rechten);
+
+                if (!$statement->execute()) {
+                    throw new Exception($connection->error);
                 }
-                // terwijl dat de variabele $stelling bezig is met het ophalen van informatie wordt de code uitgevoerd
-                while ($stelling->fetch()) {
-                    // hier wordt de informatie in de variabelen $setId, $setNaam, $setKosten en $setNummer vernadert naar de informatie uit $id, $naam, $kosten en $nummer
-                    $setId = $id;
+
+                while ($statement->fetch()) {
+                    // Set the variables to the fetched values
+                    $setId = $Id;
                     $setNaam = $naam;
-                    $setKosten = $kosten;
-                    $setNummer = $nummer;
+                    $setEmail = $email;
+                    $setBlocked = $blocked;
+                    $setRechten = $rechten;
                 }
             } else {
-                // hier wordt de gebruiker gestuurd naar legoProducten.php
-                header("location: legoProducten.php");
+                header("location: gebruikers_menu.php");
+                exit();
             }
-        }
-        // als de variabele $methode "POST" is dan wordt de code uitgevoerd
-        else if ($methode = "POST") {
-            // als de variabele $_POST["id"] bestaat dan wordt de code uitgevoerd
+        } else if ($method == "POST") {
             if (isset($_POST["id"])) {
-                // hier wordt in de variabele $postIdSet. $postSetNaam, $postSetKosten en $postSetNummer de variabele $_POST["id"], $_POST["naam"], $_POST["kosten"] en $_POST["nummer"] ingevoegd
-                $postIdSet = $_POST["id"];
-                $postSetNaam = $_POST["naam"];
-                $postSetKosten = $_POST["kosten"];
-                $postSetNummer = $_POST["nummer"];
+                $postId = $_POST["id"];
+                $postNaam = $_POST["naam"];
+                $postEmail = $_POST["Email"];
+                $postBlocked = $_POST["blocked"];
+                $postRechten = $_POST["rechten"];
 
-                // hier wordt alle informatie doorgegeven waarmee de code in de database kan
-                $connectie = new mysqli($gastheer, $gebruikerVoorDatabase, $wachtwoordVoorDatabase, $gegevensbestand);
-                // als er een connectie error is "gooit" de code de error naar de catch functie, die later in de code staat
-                if ($connectie->connect_error) {
-                    throw new Exception($connectie->connect_error);
+                $connection = new mysqli($host, $usernameDb, $passwordDb, $database);
+
+                if ($connection->connect_error) {
+                    throw new Exception($connection->connect_error);
                 }
-                // hier wordt de informatie van productNaam, productKosten en setNummer veranderd die in de database staat
-                $vraag = "UPDATE producten SET productNaam = ?, productKosten = ?, setNummer = ? WHERE idProduct  = ?";
-                // hier wordt de voorbereid
-                $stelling = $connectie->prepare($vraag);
-                // hier worden de parmaters $postSetNaam, $postSetKosten, $postIdSet en $postIdSet gezet naar string/text, integer/nummer, integer/nummer en integer/nummer waardoor het leesbaar is door de database
-                $stelling->bind_param("siii", $postSetNaam, $postSetKosten, $postSetNummer, $postIdSet);
-                // hier als de varia"bele $stelleing niet wordt uitgevoerd, dan wordt de error "gegooit" naar de catch functie, die later in de code staat
-                if (!$stelling->execute()) {
-                    throw new Exception($connectie->error);
+
+                $query = "UPDATE gebruiker_uitgebreid SET Naam = ?, Email = ?, blocked = ?, rechten_niveau = ? WHERE ID = ?";
+                $statement = $connection->prepare($query);
+                $statement->bind_param("sssii", $postNaam, $postEmail, $postBlocked, $postRechten, $postId);
+
+                if (!$statement->execute()) {
+                    throw new Exception($connection->error);
                 }
-                // hier wordt de gebruiker terug gestuurd naar legoProducten.php
-                header("location: legoProducten.php");
-                // de bericht wordt gestuurd dat de update functie succesvol is
-                setcookie("bericht", "<div class=succesvol>Succesvolle update</div>", time() + 2);
+
+                setcookie("bericht", "<div class='succesvol'>Succesvolle update</div>", time() + 2);
+                header("location: edit.php");
+                exit();
             }
         }
-    }
-
-    // dit is de catch functie wat de errors "opvangt" en de error laat zien
-    catch (Exception $e) {
+    } catch (Exception $e) {
         echo "De error is " . $e->getMessage();
     } finally {
-        // als de variabele $connectie bestaat dan sluit de code de variabele
-        if ($connectie) {
-            $connectie->close();
+        if (isset($connection)) {
+            $connection->close();
         }
-        // als de variabaele $stelling bestaat dan sluit de code de variabele
-        if ($stelling) {
-            $stelling->close();
+        if (isset($statement)) {
+            $statement->close();
         }
     }
     ?>
 </head>
 
 <body>
-    <!-- hier wordt de forum aangemaakt waar de gebruiker kan invoeren wat die wilt veranderen -->
-    <form action="legoUpdate.php" method="POST" class="update">
-        <h1> Update</h1>
-
+    <!-- Update form -->
+    <form action="bewerk.php" method="POST" class="update">
+        <h1>Update</h1>
         <input type="hidden" name="id" value="<?php echo $setId; ?>">
+
         <label>Naam</label>
         <input type="text" name="naam" placeholder="Naam" value="<?php echo $setNaam; ?>"><br>
-        <label>Kosten</label>
-        <input type="text" name="kosten" placeholder="Kosten" value="<?php echo $setKosten; ?>"><br>
-        <label>Nummer</label>
-        <input type="text" name="nummer" placeholder="Nummer" value="<?php echo $setNummer; ?>"><br>
+
+        <label>Email</label>
+        <input type="text" name="Email" placeholder="Email" value="<?php echo $setEmail; ?>"><br>
+
+        <label>Blocked</label>
+        <input type="text" name="blocked" placeholder="Blocked" value="<?php echo $setBlocked; ?>"><br>
+
+        <label>Rechten</label>
+        <input type="text" name="rechten" placeholder="Rechten" value="<?php echo $setRechten; ?>"><br>
+
         <input type="submit" value="Update">
-        <a href="legoProducten.php" class="terug">Terug</a>
+        
     </form>
 </body>
 
 </html>
+
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f7f7f7;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .update {
+        background-color: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 450px;
+        text-align: center;
+    }
+
+    h1 {
+        color: #4CAF50;
+        margin-bottom: 20px;
+        font-size: 28px;
+        font-weight: 600;
+    }
+
+    label {
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 5px;
+        display: block;
+        text-align: left;
+        padding-left: 10px;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 16px;
+        box-sizing: border-box;
+    }
+
+    input[type="submit"] {
+        width: 100%;
+        padding: 12px;
+        background-color: #28a745;
+        color: white;
+        font-weight: bold;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    input[type="submit"]:hover {
+        background-color: #4CAF50;
+        transform: scale(1.05);
+    }
+
+    input[type="submit"]:active {
+        background-color: #218838;
+    }
+
+    .terug {
+        display: inline-block;
+        padding: 12px 25px;
+        background-color: #007bff;
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        border-radius: 5px;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        margin-top: 15px;
+    }
+
+    .terug:hover {
+        background-color: #0056b3;
+        transform: scale(1.05);
+    }
+
+    .terug:active {
+        background-color: #004085;
+    }
+
+    .succesvol {
+        background-color: #28a745;
+        color: white;
+        padding: 12px;
+        border-radius: 5px;
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .error-message {
+        background-color: #dc3545;
+        color: white;
+        padding: 12px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    /* Responsive design */
+    @media (max-width: 480px) {
+        .update {
+            width: 90%;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+        }
+
+        input[type="text"],
+        input[type="submit"] {
+            font-size: 14px;
+        }
+
+        .terug {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+        }
+    }
+</style>
