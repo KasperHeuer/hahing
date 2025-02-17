@@ -23,12 +23,12 @@ if ($method === "POST") {
         $gebruikersnaam = htmlspecialchars($_POST["gebruikersnaam"]);
         $wachtwoord = htmlspecialchars($_POST["wachtwoord"]);
 
-        $query = "SELECT Naam, Salting, Email, Hash_wachtwoord, blocked, blockedTijd FROM gebruiker_uitgebreid WHERE Naam = ?";
+        $query = "SELECT Naam, Salting, Email, Hash_wachtwoord, blocked, blockedTijd, rechten_niveau FROM gebruiker_uitgebreid WHERE Naam = ?";
         $statement = $connection->prepare($query);
         $statement->bind_param("s", $gebruikersnaam);
 
         if ($statement->execute()) {
-            $statement->bind_result($dbGebruikersnaam, $salt, $email, $dbWachtwoord, $blocked, $blockedTijd);
+            $statement->bind_result($dbGebruikersnaam, $salt, $email, $dbWachtwoord, $blocked, $blockedTijd, $niveau);
 
             if ($statement->fetch()) {
                 if ($blocked == 1) {

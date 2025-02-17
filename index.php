@@ -39,8 +39,8 @@ if ($method === "POST") {
                 $achternaam = htmlspecialchars($_POST["achternaam"]);
                 $hashedWachtwoord = password_hash($wachtwoord, PASSWORD_DEFAULT);
 
-                $queryInsert = "INSERT INTO gebruiker_uitgebreid (Naam, Email, voornaam, achternaam, Salting, Hash_wachtwoord, Aantal_Logins, Laatste_Login, Blocked) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $queryInsert = "INSERT INTO gebruiker_uitgebreid (Naam, Email, voornaam, achternaam, Salting, Hash_wachtwoord, Aantal_Logins, Laatste_Login, Blocked, rechten_niveau) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
                 $statementInsert = $connection->prepare($queryInsert);
                 if ($statementInsert === false) {
@@ -50,8 +50,8 @@ if ($method === "POST") {
                 $aantal = 1;
                 $laatste = date("Y-m-d");
                 $blocked = 0;
-
-                $statementInsert->bind_param("ssssssisi", $gebruikersnaam, $email, $voornaam, $achternaam, $salting, $hashedWachtwoord, $aantal, $laatste, $blocked);
+                $niveau = 1;
+                $statementInsert->bind_param("ssssssisii", $gebruikersnaam, $email, $voornaam, $achternaam, $salting, $hashedWachtwoord, $aantal, $laatste, $blocked, $niveau);
 
                 if ($statementInsert->execute()) {
                     $message = "<p class='success-message'>Registratie geslaagd!</p>";

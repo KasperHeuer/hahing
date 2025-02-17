@@ -59,13 +59,14 @@
                 $message = "
                     <div class='user-info'>
                         <h1>Gebruikersinformatie</h1>
+                        <p><strong>Gebruikersnaam:</strong> $id</p>
                         <p><strong>Gebruikersnaam:</strong> $gebruikersnaam</p>
                         <p><strong>Voornaam:</strong> $voornaam</p>
                         <p><strong>Achternaam:</strong> $achternaam</p>
-                        <p><strong>Email:</strong> $email</p>
                         <p><strong>Wachtwoord:</strong> $wachtwoord</p>
                         <p><strong>Aantal logins:</strong> $aantal_logins</p>
                         <p><strong>Laatste login:</strong> $laatste_login</p>
+                        <a href='bewerk.php?id=$id'>bewerken</a>
                     </div>
                 ";
             } else {
@@ -84,11 +85,9 @@
     <a href="logout.php" class='logout'>Logout</a>
 </body>
 <?php
-if ($rechten >= 2) {
-    $_SESSION["rechten"] = $rechten;
-    echo "<a href='edit.php' class ='edit-link'>Edit</a>";
-}
+
 ?>
+
 </html>
 <style>
     body {
